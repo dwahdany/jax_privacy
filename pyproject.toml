@@ -3,7 +3,7 @@ name = "jax-privacy"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = "~=3.11"
 dependencies = [
     "absl-py>=1.4.0",
     "dp-accounting>=0.5.0",
@@ -15,10 +15,12 @@ dependencies = [
     "jaxtyping>=0.3.2",
     "ml-collections>=1.1.0",
     "more-itertools==10.1.0",
-    "numpy>=2.3.2",
+    "numpy",
     "optax>=0.2.5",
     "pydantic>=2.11.7",
     "scipy>=1.16.1",
+    "tensorflow>=2.19.0",
+    "tensorflow-datasets>=4.9.9",
 ]
 
 [build-system]

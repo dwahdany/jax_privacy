@@ -17,16 +17,14 @@
 # pylint:disable=g-multiple-import
 # pylint:disable=g-importing-member
 
-from image_data import chexpert
-from image_data import mimic_cxr
-
-from image_data.augmult import AugmultConfig
-from image_data.base import (
+from experiments.image_data import chexpert, mimic_cxr
+from experiments.image_data.augmult import AugmultConfig
+from experiments.image_data.base import (
     DataInputs,
     DatasetConfig,
     ImageDatasetConfig,
 )
-from image_data.chexpert import (
+from experiments.image_data.chexpert import (
     AbstractChexpertLoader,
     ChexpertTestInternalConfig,
     ChexpertTestOfficialConfig,
@@ -35,23 +33,23 @@ from image_data.chexpert import (
     ChexpertValidInternalConfig,
     ChexpertValidOfficialConfig,
 )
-from image_data.imagenet import (
-    ImageNetLoader,
+from experiments.image_data.imagenet import (
     ImageNetConfig,
+    ImageNetLoader,
+    ImageNetNumSamples,
     ImagenetTestConfig,
     ImagenetTrainConfig,
     ImagenetTrainValidConfig,
     ImagenetValidConfig,
-    ImageNetNumSamples,
 )
-from image_data.loader import (
+from experiments.image_data.loader import (
     DataLoader,
-    LoadRawDataTfFn,
     LoadDatasetFn,
+    LoadRawDataTfFn,
     default_load_dataset,
     grain_load_dataset,
 )
-from image_data.mimic_cxr import (
+from experiments.image_data.mimic_cxr import (
     AbstractMimicCxrLoader,
     MimicCxrTestInternalConfig,
     MimicCxrTestOfficialConfig,
@@ -60,37 +58,36 @@ from image_data.mimic_cxr import (
     MimicCxrValidInternalConfig,
     MimicCxrValidOfficialConfig,
 )
-from image_data.mnist_cifar_svhn import (
-    MnistLoader,
+from experiments.image_data.mnist_cifar_svhn import (
     Cifar10Loader,
-    Cifar100Loader,
-    SvhnLoader,
+    Cifar10TestConfig,
     Cifar10TrainConfig,
     Cifar10TrainValidConfig,
     Cifar10ValidConfig,
-    Cifar10TestConfig,
+    Cifar100Loader,
+    Cifar100TestConfig,
     Cifar100TrainConfig,
     Cifar100TrainValidConfig,
     Cifar100ValidConfig,
-    Cifar100TestConfig,
-    SvhnTrainConfig,
-    SvhnValidConfig,
-    SvhnTrainValidConfig,
-    SvhnTestConfig,
-    MnistTrainConfig,
-    MnistValidConfig,
-    MnistTrainValidConfig,
+    MnistLoader,
     MnistTestConfig,
+    MnistTrainConfig,
+    MnistTrainValidConfig,
+    MnistValidConfig,
+    SvhnLoader,
+    SvhnTestConfig,
+    SvhnTrainConfig,
+    SvhnTrainValidConfig,
+    SvhnValidConfig,
 )
-from image_data.places365 import (
+from experiments.image_data.places365 import (
     Places365Loader,
-    Places365TrainConfig,
-    Places365ValidConfig,
-    Places365TrainValidConfig,
-    Places365Testconfig,
     Places365NumSamples,
+    Places365Testconfig,
+    Places365TrainConfig,
+    Places365TrainValidConfig,
+    Places365ValidConfig,
 )
-
 
 MULTILABEL_DATASETS = (
     chexpert.ChexpertConfig,
