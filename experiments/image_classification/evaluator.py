@@ -21,133 +21,128 @@ over batches and aggregates metrics.
 
 import collections
 from typing import Any, Iterator, Mapping, Sequence
+
 import chex
-from einshape import jax_einshape as einshape
 import jax
-import image_data as data
-from image_classification import metrics as metrics_module
-from jax_privacy.training import devices
+from einshape import jax_einshape as einshape
+
+import experiments.image_data as data
+from experiments.image_classification import metrics as metrics_module
+from jax_privacy.training import devices, forward, updater
 from jax_privacy.training import evaluator as evaluator_py
-from jax_privacy.training import forward
-from jax_privacy.training import updater
 
 
 class ImageClassificationEvaluator(evaluator_py.AbstractEvaluator):
-  """Defines and applies the update, potentially in parallel across devices."""
+    """Defines and applies the update, potentially in parallel across devices."""
 
-  def __init__(
-      self,
-      *,
-      forward_fn: forward.ForwardFn,
-      rng: chex.PRNGKey,
-      device_layout: devices.DeviceLayout = devices.DeviceLayout(),
-      eval_auc: bool = False,
-      eval_disparity: bool = False,
-      class_names: Sequence[str],
-  ):
+    def __init__(
+        self,
+        *,
+        forward_fn: forward.ForwardFn,
+        rng: chex.PRNGKey,
+        device_layout: devices.DeviceLayout = devices.DeviceLayout(),
+        eval_auc: bool = False,
+        eval_disparity: bool = False,
+        class_names: Sequence[str],
+    ):
+        super().__init__(
+            forward_fn=forward_fn,
+            rng=rng,
+            device_layout=device_layout,
+        )
 
-    super().__init__(
-        forward_fn=forward_fn,
-        rng=rng,
-        device_layout=device_layout,
-    )
+        self._eval_auc = eval_auc
+        self._eval_disparity = eval_disparity
+        self._class_names = class_names
 
-    self._eval_auc = eval_auc
-    self._eval_disparity = eval_disparity
-    self._class_names = class_names
+    def evaluate_dataset(
+        self,
+        updater_state: updater.UpdaterState,
+        ds_iterator: Iterator[data.DataInputs],
+    ) -> Mapping[str, Any]:
+        """Evaluates a full dataset in an iterative fashion.
 
-  def evaluate_dataset(
-      self,
-      updater_state: updater.UpdaterState,
-      ds_iterator: Iterator[data.DataInputs],
-  ) -> Mapping[str, Any]:
-    """Evaluates a full dataset in an iterative fashion.
+        Args:
+          updater_state: Updater state.
+          ds_iterator: Data iterator of objects of shape (num_hosts,
+            num_devices_per_host, batch_size_per_device, *individual_shape).
 
-    Args:
-      updater_state: Updater state.
-      ds_iterator: Data iterator of objects of shape (num_hosts,
-        num_devices_per_host, batch_size_per_device, *individual_shape).
+        Returns:
+          metrics.
+        """
+        avg_metrics = collections.defaultdict(metrics_module.Avg)
 
-    Returns:
-      metrics.
-    """
-    avg_metrics = collections.defaultdict(metrics_module.Avg)
-
-    num_samples = 0
-    host_id = jax.process_index()
-
-    if self._eval_auc or self._eval_disparity:
-      all_params = ['last', *updater_state.params_avg]
-    else:
-      all_params = []
-    logits_by_params = {
-        k: metrics_module.ArrayConcatenater() for k in all_params
-    }
-    labels_by_params = {
-        k: metrics_module.ArrayConcatenater() for k in all_params
-    }
-
-    for inputs in ds_iterator:
-
-      num_hosts, num_devices_per_host, batch_size_per_device, *_ = (
-          inputs.image.shape
-      )
-      batch_size = num_hosts * num_devices_per_host * batch_size_per_device
-      num_samples += batch_size
-      local_inputs = jax.tree_util.tree_map(lambda x: x[host_id], inputs)
-
-      metrics_by_params = self._evaluate_batch(
-          updater_state=updater_state, inputs=local_inputs
-      )
-
-      for params_name, metrics in metrics_by_params.items():
-        # Update the accumulated average for each metric.
-        for metric_name, val in metrics.scalars.items():
-          avg_metrics[f'{metric_name}_{params_name}'].update(val, n=batch_size)
+        num_samples = 0
+        host_id = jax.process_index()
 
         if self._eval_auc or self._eval_disparity:
-          # Returned logits are across all devices (flattened over all hosts).
-          logits = einshape(
-              '(hd)bk->(hdb)k',
-              metrics.per_example['logits'],
-              h=num_hosts,
-              d=num_devices_per_host,
-              b=batch_size_per_device,
-          )
-          logits_by_params[params_name].append(logits)
-          # Use labels across all devices on all hosts.
-          labels = einshape(
-              'hdbk->(hdb)k',
-              inputs.label,
-              h=num_hosts,
-              d=num_devices_per_host,
-              b=batch_size_per_device,
-          )
-          labels_by_params[params_name].append(labels)
+            all_params = ["last", *updater_state.params_avg]
+        else:
+            all_params = []
+        logits_by_params = {k: metrics_module.ArrayConcatenater() for k in all_params}
+        labels_by_params = {k: metrics_module.ArrayConcatenater() for k in all_params}
 
-    metrics = {k: v.avg for k, v in avg_metrics.items()}
-    metrics['num_samples'] = num_samples
+        for inputs in ds_iterator:
+            num_hosts, num_devices_per_host, batch_size_per_device, *_ = (
+                inputs.image.shape
+            )
+            batch_size = num_hosts * num_devices_per_host * batch_size_per_device
+            num_samples += batch_size
+            local_inputs = jax.tree_util.tree_map(lambda x: x[host_id], inputs)
 
-    # Compute AUC and / or disparity with concatenated logits and labels.
-    if self._eval_auc:
-      for params_name in logits_by_params:
-        auc_metrics = metrics_module.avg_and_per_class_auc(
-            logits=logits_by_params[params_name].asarray(),
-            labels=labels_by_params[params_name].asarray(),
-            class_names=self._class_names,
-        )
-        for metric_name, val in auc_metrics.items():
-          metrics[f'{metric_name}_{params_name}'] = val
+            metrics_by_params = self._evaluate_batch(
+                updater_state=updater_state, inputs=local_inputs
+            )
 
-    if self._eval_disparity:
-      for params_name in logits_by_params:
-        disparity_metrics = metrics_module.per_class_disparity(
-            logits=logits_by_params[params_name].asarray(),
-            labels=labels_by_params[params_name].asarray(),
-            class_names=self._class_names,
-        )
-        for metric_name, val in disparity_metrics.items():
-          metrics[f'{metric_name}_{params_name}'] = val
+            for params_name, metrics in metrics_by_params.items():
+                # Update the accumulated average for each metric.
+                for metric_name, val in metrics.scalars.items():
+                    avg_metrics[f"{metric_name}_{params_name}"].update(
+                        val, n=batch_size
+                    )
 
-    return metrics
+                if self._eval_auc or self._eval_disparity:
+                    # Returned logits are across all devices (flattened over all hosts).
+                    logits = einshape(
+                        "(hd)bk->(hdb)k",
+                        metrics.per_example["logits"],
+                        h=num_hosts,
+                        d=num_devices_per_host,
+                        b=batch_size_per_device,
+                    )
+                    logits_by_params[params_name].append(logits)
+                    # Use labels across all devices on all hosts.
+                    labels = einshape(
+                        "hdbk->(hdb)k",
+                        inputs.label,
+                        h=num_hosts,
+                        d=num_devices_per_host,
+                        b=batch_size_per_device,
+                    )
+                    labels_by_params[params_name].append(labels)
 
+        metrics = {k: v.avg for k, v in avg_metrics.items()}
+        metrics["num_samples"] = num_samples
+
+        # Compute AUC and / or disparity with concatenated logits and labels.
+        if self._eval_auc:
+            for params_name in logits_by_params:
+                auc_metrics = metrics_module.avg_and_per_class_auc(
+                    logits=logits_by_params[params_name].asarray(),
+                    labels=labels_by_params[params_name].asarray(),
+                    class_names=self._class_names,
+                )
+                for metric_name, val in auc_metrics.items():
+                    metrics[f"{metric_name}_{params_name}"] = val
+
+        if self._eval_disparity:
+            for params_name in logits_by_params:
+                disparity_metrics = metrics_module.per_class_disparity(
+                    logits=logits_by_params[params_name].asarray(),
+                    labels=labels_by_params[params_name].asarray(),
+                    class_names=self._class_names,
+                )
+                for metric_name, val in disparity_metrics.items():
+                    metrics[f"{metric_name}_{params_name}"] = val
+
+        return metrics

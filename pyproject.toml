@@ -6,19 +6,24 @@ readme = "README.md"
 requires-python = "~=3.11"
 dependencies = [
     "absl-py>=1.4.0",
+    "dm-haiku>=0.0.14",
     "dp-accounting>=0.5.0",
     "einshape>=1.0",
     "grain>=0.2.11",
     "hypothesis>=6.137.1",
     "jax==0.6.2",
     "jaxlib==0.6.2",
+    "jaxline",
     "jaxtyping>=0.3.2",
     "ml-collections>=1.1.0",
     "more-itertools==10.1.0",
     "numpy",
     "optax>=0.2.5",
+    "orbax-checkpoint>=0.11.20",
     "pydantic>=2.11.7",
+    "scikit-learn>=1.7.1",
     "scipy>=1.16.1",
+    "submitit>=1.5.3",
     "tensorflow>=2.19.0",
     "tensorflow-datasets>=4.9.9",
 ]
@@ -26,3 +31,6 @@ dependencies = [
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.uv.sources]
+jaxline = { git = "https://github.com/deepmind/jaxline" }

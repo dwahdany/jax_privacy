@@ -20,6 +20,7 @@ import random
 from collections.abc import Mapping
 
 import ml_collections
+from jaxline import base_config as jaxline_base_config
 
 import experiments.image_data as data
 from experiments.image_classification import auditing
@@ -27,7 +28,6 @@ from experiments.image_classification.models import base
 from jax_privacy.training import auto_tune, optimizer_config
 from jax_privacy.training import averaging as averaging_py
 from jax_privacy.training import experiment_config as experiment_config_py
-from jax_privacy.training.jaxline import base_config as jaxline_base_config
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
