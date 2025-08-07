@@ -1,3 +1,26 @@
+[project]
+name = "jax-privacy"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "absl-py>=1.4.0",
+    "dp-accounting>=0.5.0",
+    "einshape>=1.0",
+    "grain>=0.2.11",
+    "hypothesis>=6.137.1",
+    "jax==0.6.2",
+    "jaxlib==0.6.2",
+    "jaxtyping>=0.3.2",
+    "ml-collections>=1.1.0",
+    "more-itertools==10.1.0",
+    "numpy>=2.3.2",
+    "optax>=0.2.5",
+    "pydantic>=2.11.7",
+    "scipy>=1.16.1",
+]
+
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
