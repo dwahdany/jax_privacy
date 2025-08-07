@@ -11,7 +11,7 @@ dependencies = [
     "einshape>=1.0",
     "grain>=0.2.11",
     "hypothesis>=6.137.1",
-    "jax==0.6.2",
+    "jax[cuda12]==0.6.2",
     "jaxlib==0.6.2",
     "jaxline",
     "jaxtyping>=0.3.2",

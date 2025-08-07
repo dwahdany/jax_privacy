@@ -28,7 +28,6 @@ from typing import Any
 
 import jax
 import numpy as np
-import submitit
 from absl import app, flags, logging
 from ml_collections import config_flags
 
@@ -167,12 +166,4 @@ def main(argv: Sequence[str]) -> None:
 
 
 if __name__ == "__main__":
-    executor = submitit.AutoExecutor(folder="submitit_logs")
-    executor.update_parameters(
-        slurm_partition="gpu,a100,r7525,xe8545,tmp",
-        slurm_gpus_per_task=1,
-        slurm_additional_parameters={"gpu-bind": "single:1"},
-        name="jax_privacy",
-    )
-    job = executor.submit(app.run, main)
-    print(job.result())
+    app.run(main)
